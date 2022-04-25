@@ -1,11 +1,11 @@
 from flask import Blueprint, jsonify
 
 class Planet():
-      def __init__(self, id, name, description,diameter_in_km):
-    self.id = id
-    self.name = name
-    self.description = description
-    self.diameter_in_km = diameter_in_km
+    def __init__(self, id, name, description,diameter_in_km):
+      self.id = id
+      self.name = name
+      self.description = description
+      self.diameter_in_km = diameter_in_km
 
 planets = [
   Planet(11,"Mercury", "the fastest planet", 4879),
