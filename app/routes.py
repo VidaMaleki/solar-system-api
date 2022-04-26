@@ -1,3 +1,4 @@
+from tkinter import N
 from flask import Blueprint, jsonify
 
 class Planet():
@@ -33,3 +34,24 @@ def get_all_planets():
             }
         )
     return jsonify(response)
+
+@planets_bp.route("/<planet_id>", methods = ["GET"])
+def get_one_planet(planet_id):
+    try:
+        planet_id = int(planet_id)
+    except ValueError:
+        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
+    chosen_planet = None
+    for planet in planets:
+        if planet.id == planet_id:
+            chosen_planet = {
+                "id": planet.id,
+                "name": planet.name,
+                "description": planet.description,
+                "diameter_in_km": planet.diameter_in_km
+            }
+    if chosen_planet is None:
+        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404 #ID not in dict
+    return jsonify(chosen_planet)
+
+
