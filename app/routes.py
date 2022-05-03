@@ -1,3 +1,4 @@
+from calendar import c
 from flask import Blueprint, jsonify, request
 from app import db
 from app.models.planets import Planet
@@ -37,36 +38,78 @@ def create_planet():
         "id": new_planet.id
     }, 201
 
-# def get_all_planets():
-#     response = []
-#     for planet in planets:
-#         response.append(
-#             {
-#                 "id": planet.id,
-#                 "name": planet.name,
-#                 "description": planet.description,
-#                 "diameter_in_km": planet.diameter_in_km
-#             }
-#         )
-#     return jsonify(response)
+@planets_bp.route("", methods = ["GET"])
+def get_all_planets():
+    response = []
+    planets = Planet.query.all()
+    for planet in planets:
+        response.append({
+            "id": planet.id,
+            "name": planet.name,
+            "description": planet.description,
+            "diameter_in_km": planet.diameter_in_km
+        })
 
-# @planets_bp.route("/<planet_id>", methods = ["GET"])
-# def get_one_planet(planet_id):
-#     try:
-#         planet_id = int(planet_id)
-#     except ValueError:
-#         return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
-#     chosen_planet = None
-#     for planet in planets:
-#         if planet.id == planet_id:
-#             chosen_planet = {
-#                 "id": planet.id,
-#                 "name": planet.name,
-#                 "description": planet.description,
-#                 "diameter_in_km": planet.diameter_in_km
-#             }
-#     if chosen_planet is None:
-#         return jsonify({'message': f"Could not find planet with {planet_id}"}), 404 #ID not in dict
-#     return jsonify(chosen_planet)
+    return jsonify(response)
+
+@planets_bp.route("/<planet_id>", methods = ["GET"])
+def get_one_planet(planet_id):
+    try:
+        planet_id = int(planet_id)
+    except ValueError:
+        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
+    
+    chosen_planet = Planet.query.get(planet_id)
+    if chosen_planet is None:
+        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404
+    
+    chosen_planet = {
+        "id": chosen_planet.id,
+        "name": chosen_planet.name,
+        "description": chosen_planet.description,
+        "diameter_in_km": chosen_planet.diameter_in_km
+    }
+
+    return jsonify(chosen_planet)
 
 
+@planets_bp.route("/<planet_id>", methods = ["PUT"])
+def replace_one_planet(planet_id):
+    try:
+        planet_id = int(planet_id)
+    except ValueError:
+        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
+    
+    request_body = request.get_json()
+    
+    if "name" not in request_body or "description" not in request_body or "diameter_in_km" not in request_body:
+            return jsonify({'message': "Request must include name, description, and diameter_in_km"}), 400
+
+    chosen_planet = Planet.query.get(planet_id)
+    if chosen_planet is None:
+        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404
+    
+    
+    chosen_planet.name = request_body["name"]
+    chosen_planet.description = request_body["description"]
+    chosen_planet.diameter_in_km = request_body["diameter_in_km"]
+    
+    db.session.commit()
+    
+    return jsonify({'message': f"Successfully replaced planet with id{planet_id}"})
+
+@planets_bp.route("/<planet_id>", methods = ["DELETE"])
+def delete_one_planet(planet_id):
+    try:
+        planet_id = int(planet_id)
+    except ValueError:
+        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
+    
+    chosen_planet = Planet.query.get(planet_id)
+    if chosen_planet is None:
+        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404
+    
+    db.session.delete(chosen_planet)
+    db.session.commit()
+    
+    return jsonify({'message': f"Deleted planet with id {planet_id}"})
