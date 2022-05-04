@@ -1,5 +1,5 @@
 from calendar import c
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort, make_response
 from app import db
 from app.models.planets import Planet
 
@@ -40,8 +40,21 @@ def create_planet():
 
 @planets_bp.route("", methods = ["GET"])
 def get_all_planets():
+    params = request.args
+    if "name" in params and "description" in params:
+        name_value = params["name"]
+        description_value = params["description"]
+        planets = Planet.query.filter_by(name = name_value, description = description_value)
+    elif "name" in params:
+        name_value = params["name"]
+        planets = Planet.query.filter_by(name = name_value)
+    elif "description" in params:
+        description_value = params["description"]
+        planets = Planet.query.filter_by(description = description_value)
+    
+    else:
+        planets = Planet.query.all()
     response = []
-    planets = Planet.query.all()
     for planet in planets:
         response.append({
             "id": planet.id,
@@ -52,17 +65,28 @@ def get_all_planets():
 
     return jsonify(response)
 
-@planets_bp.route("/<planet_id>", methods = ["GET"])
-def get_one_planet(planet_id):
+def get_planet_or_abort(planet_id):
     try:
         planet_id = int(planet_id)
     except ValueError:
-        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
+        response = ({'message': f"Invalid Planet ID: {planet_id} must be an interger"})
+        abort(make_response(jsonify(response), 400)) #string input
+        
+    request_body = request.get_json()
+    # if "name" not in request_body or "description" not in request_body or "diameter_in_km" not in request_body:
+    #         return jsonify({'message': "Request must include name, description, and diameter_in_km"}), 400
     
     chosen_planet = Planet.query.get(planet_id)
     if chosen_planet is None:
-        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404
-    
+        response = ({'message': f"Could not find planet with {planet_id}"})
+        abort(make_response(jsonify(response), 404))
+        
+    return chosen_planet
+
+@planets_bp.route("/<planet_id>", methods = ["GET"])
+def get_one_planet(planet_id):
+
+    chosen_planet = get_planet_or_abort(planet_id)
     chosen_planet = {
         "id": chosen_planet.id,
         "name": chosen_planet.name,
@@ -75,21 +99,8 @@ def get_one_planet(planet_id):
 
 @planets_bp.route("/<planet_id>", methods = ["PUT"])
 def replace_one_planet(planet_id):
-    try:
-        planet_id = int(planet_id)
-    except ValueError:
-        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
-    
     request_body = request.get_json()
-    
-    if "name" not in request_body or "description" not in request_body or "diameter_in_km" not in request_body:
-            return jsonify({'message': "Request must include name, description, and diameter_in_km"}), 400
-
-    chosen_planet = Planet.query.get(planet_id)
-    if chosen_planet is None:
-        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404
-    
-    
+    chosen_planet = get_planet_or_abort(planet_id)
     chosen_planet.name = request_body["name"]
     chosen_planet.description = request_body["description"]
     chosen_planet.diameter_in_km = request_body["diameter_in_km"]
@@ -100,14 +111,8 @@ def replace_one_planet(planet_id):
 
 @planets_bp.route("/<planet_id>", methods = ["DELETE"])
 def delete_one_planet(planet_id):
-    try:
-        planet_id = int(planet_id)
-    except ValueError:
-        return jsonify({'message': f"Invalid Planet ID: {planet_id} must be an interger"}), 400 #string input
-    
-    chosen_planet = Planet.query.get(planet_id)
-    if chosen_planet is None:
-        return jsonify({'message': f"Could not find planet with {planet_id}"}), 404
+    #request_body = request.get_json()
+    chosen_planet = get_planet_or_abort(planet_id)
     
     db.session.delete(chosen_planet)
     db.session.commit()
