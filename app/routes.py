@@ -1,14 +1,8 @@
-from calendar import c
 from flask import Blueprint, jsonify, request, abort, make_response
 from app import db
 from app.models.planets import Planet
 
-# class Planet():
-#         def __init__(self, id, name, description,diameter_in_km):
-#             self.id = id
-#             self.name = name
-#             self.description = description
-#             self.diameter_in_km = diameter_in_km
+
 
 # planets = [
 #     Planet(11,"Mercury", "the fastest planet", 4879),
@@ -25,7 +19,7 @@ planets_bp = Blueprint("planets", __name__, url_prefix="/planets")
 @planets_bp.route("", methods = ["POST"])
 def create_planet():
     request_body = request.get_json()
-    print(request_body)
+    
     new_planet = Planet(
         name = request_body["name"],
         description = request_body["description"],
@@ -34,9 +28,11 @@ def create_planet():
     db.session.add(new_planet)
     db.session.commit()
     
-    return {
-        "id": new_planet.id
-    }, 201
+    #we could return two ways
+    #return make_response(jsonify(f"Planet: {new_planet.name} successfully created"), 201)
+    return {"id": new_planet.id}, 201
+
+
 
 @planets_bp.route("", methods = ["GET"])
 def get_all_planets():
@@ -85,7 +81,7 @@ def get_planet_or_abort(planet_id):
 
 @planets_bp.route("/<planet_id>", methods = ["GET"])
 def get_one_planet(planet_id):
-
+    
     chosen_planet = get_planet_or_abort(planet_id)
     chosen_planet = {
         "id": chosen_planet.id,
